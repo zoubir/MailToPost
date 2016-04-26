@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ * See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+-->
+
+<xwikidoc version="1.1">
+  <web>MailToPostCode</web>
+  <name>MailExtractorServices</name>
+  <language/>
+  <defaultLanguage/>
+  <translation>0</translation>
+  <creator>xwiki:XWiki.Admin</creator>
+  <creationDate>1461594801000</creationDate>
+  <author>xwiki:XWiki.Admin</author>
+  <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
+  <date>1461604773000</date>
+  <contentUpdateDate>1461604773000</contentUpdateDate>
+  <version>1.1</version>
+  <title/>
+  <comment/>
+  <minorEdit>false</minorEdit>
+  <syntaxId>xwiki/2.1</syntaxId>
+  <hidden>false</hidden>
+  <content>//{{groovy}}
+package org.xwiki.mail;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+
+import javax.mail.BodyPart;
+import javax.mail.Flags;
+import javax.mail.Folder;
+import javax.mail.Message;
+import javax.mail.MessagingException;
+import javax.mail.Multipart;
+import javax.mail.NoSuchProviderException;
+import javax.mail.Session;
+import javax.mail.Store;
+import javax.mail.internet.MimeMessage;
+import javax.mail.internet.MimeMultipart;
+import javax.mail.search.FlagTerm;
+
+/**
+ * @author Zoubir Medjdoub
+ */
+public class MailExtractor
+{
+    private boolean removeMessagesAfterRead = false; //set this prop to true the email will be deleted after read
+
+    private boolean markAsNoRead = true; // set this prop true value the email will be mark as unread
+
+    private List error;// list of errors
+
+    private String host = "imap.gmail.com";
+
+    private String username = "myemail@gmail.com";
+
+    private String password = "mypassword";
+
+    public void init(String host, String username, String password)
+    {
+        this.host = host;
+        this.username = username;
+        this.password = password;
+    }
+
+    public void init(String host, String username, String password, boolean markAsNoRead)
+    {
+        this.host = host;
+        this.username = username;
+        this.password = password;
+        this.markAsNoRead = markAsNoRead;
+    }
+
+    /**
+     * This function is used to get the new email to import into the plateform
+     *
+     * @return the connection state
+     */
+    public boolean checkConnection()
+    {
+        try {
+            Properties props = System.getProperties();
+            props.setProperty("mail.store.protocol", "imaps");
+            props.setProperty("mail.imaps.ssl.trust", "*");
+            Session session = Session.getInstance(props, null);
+            Store store = session.getStore();
+            store.connect(host, username, password);
+            return store.isConnected();
+        } catch (MessagingException e) {
+            addError("[MessagingException] " + e.getMessage());
+        } catch (Exception e) {
+            addError("[NoSuchProviderException] " + e.getMessage());
+        }
+        return false;
+    }
+
+    /**
+     * This function is used to get the new email to import into the plateform
+     *
+     * @param loadContent setting this param to true this will load the email content
+     * @return the list of new email from inbox folder
+     */
+    public List getNewEmails(boolean loadContent)
+    {
+        return getEmails(false, loadContent);
+    }
+
+    /**
+     * This function is used to get the messages from server
+     *
+     * @param withSeen setting this param to true , this function will get all the emails even the seen
+     * @param loadContent setting this param to true this will load the email content
+     * @return Liste of messages
+     */
+    private List getEmails(boolean withSeen, boolean loadContent)
+    {
+        ArrayList emails = new ArrayList();
+        try {
+            Folder inbox = getInboxFolder();
+            Message[] unreadEmails;
+            if (!withSeen) {
+                //  create a search term for all "unseen" messages
+                Flags seen = new Flags(Flags.Flag.SEEN);
+                FlagTerm unseenFlagTerm = new FlagTerm(seen, false);
+                // Check if there is some filter on the subject
+                unreadEmails = inbox.search(new FlagTerm(new Flags(Flags.Flag.SEEN), false));
+                System.out.println("Message size: " + unreadEmails.length);
+            } else {
+                unreadEmails = inbox.getMessages();
+            }
+            Map message;
+            for (int i = 0; i &lt; unreadEmails.length; i++) {
+                Message email = unreadEmails[i];
+                Object obj = email.getContent();
+                String contentType = email.getContentType();
+                message = new HashMap();
+                message.put("ID", email.getMessageNumber());
+                message.put("CONTENT_TYPE", contentType);
+                message.put("FROM", email.getFrom()[0].toString());
+                message.put("DATE", email.getReceivedDate());
+                message.put("SUBJECT", email.getSubject());
+
+                message.put("SIZE", email.getSize());
+                if (loadContent) {
+                    parseContent(obj, message);
+                }
+                if (removeMessagesAfterRead) {
+                    email.setFlag(Flags.Flag.DELETED, true);
+                }
+                if (markAsNoRead) {
+                    email.setFlag(Flags.Flag.SEEN, false);
+                }
+                emails.add(message);
+            }
+            inbox.close(false);
+        } catch (NoSuchProviderException e) {
+            addError("[NoSuchProviderException] " + e.getMessage());
+            System.out.println("[NoSuchProviderException] " + e.getMessage());
+            e.printStackTrace();
+        } catch (MessagingException e) {
+            addError("[MessagingException] " + e.getMessage());
+            System.out.println("[MessagingException] " + e.getMessage());
+            e.printStackTrace();
+        } catch (IOException e) {
+            addError("[IOException] " + e.getMessage());
+            System.out.println("[IOException] " + e.getMessage());
+            e.printStackTrace();
+        } catch (NullPointerException e) {
+            addError("[NullPointerException] " + e.getMessage());
+            System.out.println("[NullPointerException] " + e.getMessage());
+            e.printStackTrace();
+        } catch (Exception e) {
+            addError("[Exception] " + e.getMessage());
+            System.out.println("[Exception] " + e.getMessage());
+            e.printStackTrace();
+        }
+        return newEmails;
+    }
+
+    /**
+     * Extract an email of type text/plain or text/html from server
+     *
+     * @param content the content of email
+     * @param message an objet of type Map that contains the email to init
+     */
+    private void parseContent(Object content, Map message)
+    {
+        try {
+            if (content instanceof String) {
+                message.put("BODY", content.toString());
+            } else if (content instanceof Multipart
+                    || content instanceof MimeMultipart)
+            {
+                Multipart multipart = (Multipart) content;
+                for (int i = 0; i &lt; multipart.getCount(); i++) {
+                    BodyPart bodyPart = multipart.getBodyPart(i);
+
+                    Object obj = bodyPart.getContent();
+                    if (obj instanceof String) {
+                        message.put("CONTENT_TYPE", bodyPart.getContentType());
+                        message.put("BODY", bodyPart.getContent());
+                        //return;
+                    } else if (obj instanceof Multipart
+                            || obj instanceof MimeMultipart)
+                    {
+                        parseContent(obj, message);
+                    } else if (obj instanceof MimeMessage) {
+                        parseContent(((MimeMessage) obj).getContent(), message);
+                    } else {
+                        addError("Invalid content type");
+                    }
+                }
+            }
+        } catch (MessagingException e) {
+            addError("[MessagingException] " + e.getMessage());
+            e.printStackTrace();
+        } catch (IOException e) {
+            addError("[IOException] " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private Folder getInboxFolder()
+    {
+        try {
+            Properties props = System.getProperties();
+            props.setProperty("mail.store.protocol", "imaps");
+            Session session = Session.getInstance(props, null);
+            Store store = session.getStore();
+            store.connect(host, username, password);
+            Folder inbox = store.getFolder("INBOX");
+            inbox.open(Folder.READ_WRITE);
+            return inbox;
+        } catch (MessagingException e) {
+            addError("[MessagingException] " + e.getMessage());
+            return null;
+        } catch (Exception e) {
+            addError("[NoSuchProviderException] " + e.getMessage());
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+
+    /**
+     *  Add the  exception on the Log in order to display it on the UI
+     *
+     * @param msg the message to add
+     */
+    private void addError(String msg)
+    {
+        if (error == null) {
+            error = new ArrayList&lt;String&gt;();
+        }
+        error.add(msg);
+    }
+
+    /**
+     * get the list of exceptions
+     *
+     * @return Objet the list of exceptions
+     */
+    public List getError()
+    {
+        return error;
+    }
+}
+/*
+MailExtractor mailExtract = new MailExtractor("imap.gmail.com", "zizoumedj@gmail.com", "zizou_medj2015",true);
+
+println mailExtract.getNewEmails(false);
+        println mailExtract.getError();
+{{/groovy}}
+*/</content>
+</xwikidoc>
