@@ -38,44 +38,334 @@
   <syntaxId>xwiki/2.1</syntaxId>
   <hidden>true</hidden>
   <content>{{velocity}}
-## You can modify this page to customize the presentation of your object.
-## At first you should keep the default presentation and just save the document.
-
-#set($class = $doc.getObject('MailToPostCode.ConfigClass').xWikiClass)
-#foreach($prop in $class.properties)
-  ; $prop.prettyName
-  : $doc.display($prop.getName())
-#end
-
-
-{{info}}
-It's important that no one else can guess this email because any emails received are published as blog posts.
-{{/info}}
-
-{{html wiki=true}}
-&lt;div&gt;&lt;a  href="$doc.getURL("view","action=checkConfig")"&gt;Check configuration&lt;/a&gt;&lt;/div&gt;
-{{/html}}
-
-## Init the config vars
-#if("$!request.action" == "checkConfig")
-  #set($emo = $doc.getObject("MailToPostCode.ConfigClass"))
-  #set($host = $emo.get("host"))
-  #set($email = $emo.getProperty("email").getValue())
-  #set($password = $emo.getProperty("password").getValue())
- ##* pass : $emo.getProperty("password").getValue() $email
-  #set($markAsNoRead = true)
-  ## Init the mailExtractor services
-  #set($meServices = $xwiki.parseGroovyFromPage("MailToPostCode.MailExtractorServices"))
-  #set($discard = $meServices.init($host,$email,$password,$markAsNoRead))
-  #set($connect = $meServices.checkConnection())
-  #set($discard = $meServices.close())
-  #if(!$connect)
-    #foreach($error in $meServices.getError())
-      {{error}} $error {{/error}}
-    #end
-  #else
-    (% style="color:green" %) success
-  #end
-#end
-{{/velocity}}</content>
+        #set($discard  = $xwiki.ssx.use('MailToPostCode.ConfigSheet'))
+        (% class="mailToPost" %)(((
+        #set($class = $doc.getObject('MailToPostCode.ConfigClass').xWikiClass)
+        #foreach($prop in $class.properties)
+        ; $prop.prettyName
+        : $doc.display($prop.getName())
+        #end
+        
+        {{info}}
+        It's important that no one else can guess this email because any emails received are published as blog posts.
+        {{/info}}
+        
+        {{html wiki=true}}
+        &lt;div class="checkConfig"&gt;&lt;a  href="$doc.getURL("view","action=checkConfig")"&gt;Check configuration&lt;/a&gt;&lt;/div&gt;
+        {{/html}}
+        
+        ## Init the config vars
+        #if("$!request.action" == "checkConfig")
+        #set($emo = $doc.getObject("MailToPostCode.ConfigClass"))
+        #set($host = $emo.get("host"))
+        #set($email = $emo.getProperty("email").getValue())
+        #set($password = $emo.getProperty("password").getValue())
+        ##* pass : $emo.getProperty("password").getValue() $email
+        #set($markAsNoRead = true)
+        ## Init the mailExtractor services
+        #set($meServices = $xwiki.parseGroovyFromPage("MailToPostCode.MailExtractorServices"))
+        #set($discard = $meServices.init($host,$email,$password,$markAsNoRead))
+        #set($connect = $meServices.checkConnection())
+        #set($discard = $meServices.close())
+        #if(!$connect)
+        #foreach($error in $meServices.getError())
+        {{error}} $error {{/error}}
+        #end
+        #else
+        
+        {{info}}
+        successful connection  to $email !
+        {{/info}}
+        
+        #end
+        #end
+        
+        ))) ## .mailToPost
+        {{/velocity}}</content>
+  <object>
+    <name>MailToPostCode.ConfigSheet</name>
+    <number>0</number>
+    <className>XWiki.StyleSheetExtension</className>
+    <guid>a15ce11f-d1d2-4f44-997e-a5ec37d08bd3</guid>
+    <class>
+      <name>XWiki.StyleSheetExtension</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <cache>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <multiSelect>0</multiSelect>
+        <name>cache</name>
+        <number>5</number>
+        <prettyName>Caching policy</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>long|short|default|forbid</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </cache>
+      <code>
+        <disabled>0</disabled>
+        <name>code</name>
+        <number>2</number>
+        <prettyName>Code</prettyName>
+        <rows>20</rows>
+        <size>50</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </code>
+      <contentType>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <multiSelect>0</multiSelect>
+        <name>contentType</name>
+        <number>6</number>
+        <prettyName>Content Type</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>CSS|LESS</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </contentType>
+      <name>
+        <disabled>0</disabled>
+        <name>name</name>
+        <number>1</number>
+        <prettyName>Name</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </name>
+      <parse>
+        <disabled>0</disabled>
+        <displayFormType>select</displayFormType>
+        <displayType>yesno</displayType>
+        <name>parse</name>
+        <number>4</number>
+        <prettyName>Parse content</prettyName>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.BooleanClass</classType>
+      </parse>
+      <use>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <multiSelect>0</multiSelect>
+        <name>use</name>
+        <number>3</number>
+        <prettyName>Use this extension</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>currentPage|onDemand|always</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </use>
+    </class>
+    <property>
+      <cache>default</cache>
+    </property>
+    <property>
+      <code>.mailToPost {
+                border: 1px solid #E9E9E9;
+                padding: 15px 15px 25px;
+                border-radius: 5px;
+                }
+                .mailToPost dl&gt;* {
+                display: block;
+                }
+                .mailToPost dl&gt;dd {
+                background: #f5f5f5;
+                padding: 5px 10px;
+                min-height: 32px;
+                border-bottom: 1px solid #CCC;
+                border-radius: 5px;
+                margin-bottom: 2px;
+                text-shadow: 1px 2px 0px #fff;
+                margin: 10px 0px;
+                }
+                .mailToPost dl:hover&gt;dt {
+                color: #000;
+                }
+                .mailToPost dl&gt;dd:hover {
+                border-bottom: 2px solid ;
+                
+                }
+                #inline .mailToPost dl&gt;dd {
+                background: transparent;
+                padding: 0px;
+                min-height: 32px;
+                border-bottom: none;
+                border-radius: 0;
+                }
+                
+                .mailToPost dl&gt;dt {
+                }
+                
+                .mailToPost dl&gt;dd * {
+                margin-bottom: 0;
+                }
+                .mailToPost dl {
+                padding: 10px 0 0;
+                margin-bottom: 1px;
+                }
+                #inline .mailToPost dl&gt;dd input, #inline .mailToPost dl&gt;dd select {
+                width: 100%;
+                }
+                
+                
+                .mailToPost .checkConfig {
+                text-align: right;
+                margin: 10px;
+                }
+                
+                .mailToPost .checkConfig a {
+                color: #fff;
+                padding: 10px;
+                }
+                
+                
+            </code>
+    </property>
+    <property>
+      <contentType>CSS</contentType>
+    </property>
+    <property>
+      <name/>
+    </property>
+    <property>
+      <parse>0</parse>
+    </property>
+    <property>
+      <use>currentPage</use>
+    </property>
+  </object>
+  <object>
+    <name>MailToPostCode.ConfigSheet</name>
+    <number>1</number>
+    <className>XWiki.StyleSheetExtension</className>
+    <guid>a2b92015-9762-4fe8-9f46-4a553100feac</guid>
+    <class>
+      <name>XWiki.StyleSheetExtension</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <cache>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <multiSelect>0</multiSelect>
+        <name>cache</name>
+        <number>5</number>
+        <prettyName>Caching policy</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>long|short|default|forbid</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </cache>
+      <code>
+        <disabled>0</disabled>
+        <name>code</name>
+        <number>2</number>
+        <prettyName>Code</prettyName>
+        <rows>20</rows>
+        <size>50</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </code>
+      <contentType>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <multiSelect>0</multiSelect>
+        <name>contentType</name>
+        <number>6</number>
+        <prettyName>Content Type</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>CSS|LESS</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </contentType>
+      <name>
+        <disabled>0</disabled>
+        <name>name</name>
+        <number>1</number>
+        <prettyName>Name</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </name>
+      <parse>
+        <disabled>0</disabled>
+        <displayFormType>select</displayFormType>
+        <displayType>yesno</displayType>
+        <name>parse</name>
+        <number>4</number>
+        <prettyName>Parse content</prettyName>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.BooleanClass</classType>
+      </parse>
+      <use>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <multiSelect>0</multiSelect>
+        <name>use</name>
+        <number>3</number>
+        <prettyName>Use this extension</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>currentPage|onDemand|always</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </use>
+    </class>
+    <property>
+      <cache>default</cache>
+    </property>
+    <property>
+      <code>.mailToPost dl&gt;dd:hover {
+                border-bottom-color: @navbar-default-bg;
+                }
+                .mailToPost .checkConfig a {
+                background:@navbar-default-bg;
+                }</code>
+    </property>
+    <property>
+      <contentType>LESS</contentType>
+    </property>
+    <property>
+      <name/>
+    </property>
+    <property>
+      <parse>0</parse>
+    </property>
+    <property>
+      <use>currentPage</use>
+    </property>
+  </object>
 </xwikidoc>
