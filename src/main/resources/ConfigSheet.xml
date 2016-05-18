@@ -48,6 +48,10 @@
         #end
         
         {{info}}
+        * Host :
+        ** hotmail.com : imap-mail.outlook.com
+        ** gmail.com : imap.gmail.com
+        
         It's important that no one else can guess this email because any emails received are published as blog posts.
         {{/info}}
         
